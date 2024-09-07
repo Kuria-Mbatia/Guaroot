@@ -32,9 +32,12 @@
 
 ## NLP Techniques and Machine Learning
 >Text preprocessing: Tokenization, stopword removal, and lemmatization using NLTK [Source](https://www.kaggle.com/code/awadhi123/text-preprocessing-using-nltk)
+>
 >Feature extraction: TF-IDF (Term Frequency-Inverse Document Frequency) vectorization [Source](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)
+>
 >Machine learning: Support Vector Machine (SVM) classifier for spam detection [Source](https://towardsdatascience.com/support-vector-machine-introduction-to-machine-learning-algorithms-934a444fca47)
->Keyword matching: Regular expressions for detecting specific patterns in messages (Source)[https://towardsdatascience.com/keyword-extraction-process-in-python-with-natural-language-processing-nlp-d769a9069d5c]
+>
+>Keyword matching: Regular expressions for detecting specific patterns in messages [Source](https://towardsdatascience.com/keyword-extraction-process-in-python-with-natural-language-processing-nlp-d769a9069d5c)
 
 
 
