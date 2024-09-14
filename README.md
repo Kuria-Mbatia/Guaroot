@@ -6,15 +6,34 @@
 # Where does the name Nike-Zues come from?
 >"Nike Zeus was an anti-ballistic missile (ABM) system developed by the United States Army during the late 1950s and early 1960s that was designed to destroy incoming Soviet intercontinental ballistic missile warheads before they could hit their targets"
 
-### In our case the Soviet ICBM's are spam bots infiltrating GroupMe servers posing as students
+### In our case the Soviet ICBM's are spam bots infiltrating GroupMe servers posing as students. Nike-Zeus is a sophisticated GroupMe bot that employs advanced Natural Language Processing (NLP) techniques and machine learning to analyze messages, detect spam, and provide intelligent moderation capabilities in a GroupMe chat environment. Inspired by the Nike Zeus anti-ballistic missile system designed to intercept Soviet ICBMs, this bot aims to intercept and neutralize spam messages infiltrating GroupMe servers.
 
 ## Why even impliment such a system when a simple key word searching bot is good enough?
->Good enough is alright but we want the ability for a system to learn and change, even a flawed adaptive system is better than none at all.
+>Good enough is alright, but we want the ability for a system to learn and change, while a simple keyword-searching bot might suffice for basic spam detection, Nike-Zeus takes it a step further by incorporating an adaptive learning system. Even a flawed adaptive system is preferable to none at all, as it allows for continuous improvement and refinement over time
 
 ### This GroupMe bot utilizes Natural Language Processing (NLP) techniques and machine learning to analyze messages, detect spam, and provide intelligent responses in a GroupMe chat.
 
 ## What the Code Does
 ### The code implements a Flask web application that processes incoming GroupMe messages. Here's a breakdown of its main functions:
+
+>
+>### Spam and Fraudulent Message Detection:
+>'''Nike-Zeus employs an SVM (Support Vector Machine) classifier trained on a dataset stored in a CSV file (spam.csv) to identify spam and potentially fraudulent messages. It utilizes TF-IDF (Term Frequency-Inverse Document Frequency) features to represent messages and assigns spam probability scores.
+Keyword-based Flagging: The bot checks messages against predefined sets of keywords related to selling, tickets, concerts, and other flagged words. Messages containing these keywords are flagged and added to the user's message cache for further analysis.
+>### Rate Limiting:
+>'''To prevent users from sending messages too quickly, Nike-Zeus implements rate limiting. If a user exceeds the defined rate limit, the bot sends a warning message to maintain a controlled chat environment.
+
+>### User and Message Management:
+>'''When a message is flagged as spam or fraudulent, Nike-Zeus has the ability to remove the offending user from the group and delete the flagged message using the GroupMe API.
+> ### Message Caching and Duplicate Detection:
+>'''The bot maintains a cache of recently sent messages for each user and checks for duplicates to avoid processing the same message multiple times, optimizing its efficiency.
+Self-introduction and Help: When the bot's name is mentioned along with the word "about," it responds with a helpful description of itself and its capabilities, assisting users in understanding its purpose and functionality.
+
+>### Model Retraining:
+>'''Nike-Zeus continuously updates its training dataset (spam.csv) with newly flagged spam messages and triggers a model retraining process in a separate thread. This ensures that the classifier stays up to date with the latest spam patterns and maintains its effectiveness over time.
+
+
+
 
 >```
 >load_training_data(): Loads spam classification training data from a CSV file.
