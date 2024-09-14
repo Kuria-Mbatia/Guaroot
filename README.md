@@ -14,23 +14,20 @@ In our case the Soviet ICBM's are spam bots infiltrating GroupMe servers posing 
 ### This GroupMe bot utilizes Natural Language Processing (NLP) techniques and machine learning to analyze messages, detect spam, and provide intelligent responses in a GroupMe chat.
 
 ## What the Code Does
-### The code implements a Flask web application that processes incoming GroupMe messages. Here's a breakdown of its main functions:
-
->
 >### Spam and Fraudulent Message Detection:
->'''Nike-Zeus employs an SVM (Support Vector Machine) classifier trained on a dataset stored in a CSV file (spam.csv) to identify spam and potentially fraudulent messages. It utilizes TF-IDF (Term Frequency-Inverse Document Frequency) features to represent messages and assigns spam probability scores.
+>Nike-Zeus employs an SVM (Support Vector Machine) classifier trained on a dataset stored in a CSV file (spam.csv) to identify spam and potentially fraudulent messages. It utilizes TF-IDF (Term Frequency-Inverse Document Frequency) features to represent messages and assigns spam probability scores.
 Keyword-based Flagging: The bot checks messages against predefined sets of keywords related to selling, tickets, concerts, and other flagged words. Messages containing these keywords are flagged and added to the user's message cache for further analysis.
 >### Rate Limiting:
->'''To prevent users from sending messages too quickly, Nike-Zeus implements rate limiting. If a user exceeds the defined rate limit, the bot sends a warning message to maintain a controlled chat environment.
+>To prevent users from sending messages too quickly, Nike-Zeus implements rate limiting. If a user exceeds the defined rate limit, the bot sends a warning message to maintain a controlled chat environment.
 
 >### User and Message Management:
->'''When a message is flagged as spam or fraudulent, Nike-Zeus has the ability to remove the offending user from the group and delete the flagged message using the GroupMe API.
+>When a message is flagged as spam or fraudulent, Nike-Zeus has the ability to remove the offending user from the group and delete the flagged message using the GroupMe API.
 > ### Message Caching and Duplicate Detection:
->'''The bot maintains a cache of recently sent messages for each user and checks for duplicates to avoid processing the same message multiple times, optimizing its efficiency.
+>The bot maintains a cache of recently sent messages for each user and checks for duplicates to avoid processing the same message multiple times, optimizing its efficiency.
 Self-introduction and Help: When the bot's name is mentioned along with the word "about," it responds with a helpful description of itself and its capabilities, assisting users in understanding its purpose and functionality.
 
 >### Model Retraining:
->'''Nike-Zeus continuously updates its training dataset (spam.csv) with newly flagged spam messages and triggers a model retraining process in a separate thread. This ensures that the classifier stays up to date with the latest spam patterns and maintains its effectiveness over time.
+>Nike-Zeus continuously updates its training dataset (spam.csv) with newly flagged spam messages and triggers a model retraining process in a separate thread. This ensures that the classifier stays up to date with the latest spam patterns and maintains its effectiveness over time.
 
 
 
