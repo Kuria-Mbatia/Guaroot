@@ -22,7 +22,7 @@ Keyword-based Flagging: The bot checks messages against predefined sets of keywo
 
 ### User and Message Management:
 >When a message is flagged as spam or fraudulent, Nike-Zeus has the ability to remove the offending user from the group and delete the flagged message using the GroupMe API.
-> ### Message Caching and Duplicate Detection:
+### Message Caching and Duplicate Detection:
 >The bot maintains a cache of recently sent messages for each user and checks for duplicates to avoid processing the same message multiple times, optimizing its efficiency.
 Self-introduction and Help: When the bot's name is mentioned along with the word "about," it responds with a helpful description of itself and its capabilities, assisting users in understanding its purpose and functionality.
 
