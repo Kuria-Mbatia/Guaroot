@@ -13,18 +13,27 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 import numpy as np
+import os
+from scipy.sparse import issparse
+import threading
+import joblib
+from concurrent.futures import ThreadPoolExecutor
+
+model_lock = threading.Lock()
+current_model = None
+current_vectorizer = None
 
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
-BOT_ID = "Place bot id here"
+BOT_ID = "Enter Bot ID Here"
 BOT_NAME = "Nike-Zeus"
 API_ROOT = 'https://api.groupme.com/v3/'
 POST_URL = "https://api.groupme.com/v3/bots/post"
 REMOVE_MEMBER_URL = "https://api.groupme.com/v3/groups/{group_id}/members/{member_id}?token={access_token}"
 DELETE_MESSAGE_URL = "https://api.groupme.com/v3/groups/{group_id}/messages/{message_id}?token={access_token}"
-access_token = "Place token here"  
+access_token = "Enter access token here"  
 
 app = Flask(__name__)
 
@@ -35,31 +44,68 @@ stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
 
-selling_keywords = ['sell', 'selling', 'sale', 'sold', 'vending', 'trading', 'dealing']
+selling_keywords = ['sell', 'selling', 'sale', 'sold', 'vending', 'trading', 'dealing','cheap','price','buying',]
 ticket_keywords = ['ticket', 'tickets', 'admission', 'pass', 'entry']
 concert_keywords = ['concert', 'show', 'performance', 'gig', 'event']
-flagged_words = ['dm', 'messag', 'direct', 'contact']
+flagged_words = ['dm', 'messag', 'direct', 'contact','essay writer','student paper assignments','']
 
+def get_flagged_words(message):
+    words = re.findall(r'\b\w+\b', message.lower())
+    flagged_words = []
+    for word in words:
+        if word in selling_keywords:
+            flagged_words.append(('selling', word))
+        elif word in ticket_keywords:
+            flagged_words.append(('ticket', word))
+        elif word in concert_keywords:
+            flagged_words.append(('concert', word))
+        elif word in flagged_words:
+            flagged_words.append(('flagged', word))
+    return flagged_words
 keyword_regex = re.compile(r'\b(' + '|'.join(selling_keywords + ticket_keywords + concert_keywords + flagged_words) + r')\b', re.IGNORECASE)
 
+#Change rates later...
 RATE_LIMIT_WINDOW = 60  # Time window in seconds
 RATE_LIMIT_COUNT = 25  # Maximum number of messages allowed within the time window
 
 user_message_counts = defaultdict(list)
 
 def load_training_data(file_path):
+    # Get the directory of the current script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Construct the full path to the CSV file
+    full_path = os.path.join(current_dir, file_path)
+    
     training_data = []
-    with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
-        csv_reader = csv.reader(file)
-        next(csv_reader)  # Skip the header row
-        for row in csv_reader:
-            label = row[0]
-            message = row[1]
-            training_data.append((message, label))
+    
+    try:
+        with open(full_path, 'r', encoding='utf-8', errors='replace') as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader, None)  # Skip the header row
+            for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header
+                if not row:  # Skip empty rows
+                    print(f"Warning: Empty row found at line {row_num}. Skipping.")
+                    continue
+                if len(row) < 2:
+                    print(f"Warning: Insufficient columns in row at line {row_num}. Skipping. Row content: {row}")
+                    continue
+                label, message = row[0], row[1]
+                training_data.append((message, label))
+    except FileNotFoundError:
+        print(f"Error: The file {full_path} was not found.")
+        return []
+    except Exception as e:
+        print(f"An error occurred while reading the file: {str(e)}")
+        return []
+    
+    if not training_data:
+        print("Warning: No valid data was loaded from the CSV file.")
+    
     return training_data
+# call func.. don't ask
+training_data = load_training_data('spam.csv')
 
-csv_file_path = 'Place Training data here
-training_data = load_training_data(csv_file_path)
 
 def preprocess_text(text):
     lemmatizer = WordNetLemmatizer()
@@ -68,26 +114,72 @@ def preprocess_text(text):
     filtered_tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalnum() and token not in stop_words]
     return ' '.join(filtered_tokens)
 
-# Preprocess the training data
+# Preprocess training data
 X = [preprocess_text(text) for text, _ in training_data]
 y = [label for _, label in training_data]
 
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Initialize and train the SVM classifier during startup
+# Initialize and train the SVM classifier during startup, don't ask please - Km
 vectorizer = TfidfVectorizer()
 X_train_tfidf = vectorizer.fit_transform(X_train)
 X_test_tfidf = vectorizer.transform(X_test)
+
+def train_model():
+    global current_model, current_vectorizer
+    
+    training_data = load_training_data('spam.csv')
+    if not training_data:
+        print("Error: No training data available. Model training aborted.")
+        return
+    
+    X = [preprocess_text(text) for text, _ in training_data]
+    y = [label for _, label in training_data]
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    new_vectorizer = TfidfVectorizer()
+    X_train_tfidf = new_vectorizer.fit_transform(X_train)
+    X_test_tfidf = new_vectorizer.transform(X_test)
+
+    new_model = SVC(kernel='linear', probability=True)
+    new_model.fit(X_train_tfidf, y_train)
+
+    # Use a lock to safely update the global model and vectorizer
+    with model_lock:
+        current_model = new_model
+        current_vectorizer = new_vectorizer
+    
+    print("Model retrained and updated successfully")
+
 
 svm_classifier = SVC(kernel='linear', probability=True)
 svm_classifier.fit(X_train_tfidf, y_train)
 
 def classify_message(message):
     preprocessed_message = preprocess_text(message)
-    tfidf_feature_vector = vectorizer.transform([preprocessed_message])
-    spam_probability = svm_classifier.predict_proba(tfidf_feature_vector)[0][1]
-    return spam_probability
+    
+    with model_lock:
+        if current_model is None or current_vectorizer is None:
+            return 0.0, []  # Return default values if model is not ready
+        
+        tfidf_feature_vector = current_vectorizer.transform([preprocessed_message])
+        spam_probability = current_model.predict_proba(tfidf_feature_vector)[0][1]
+        
+        feature_names = current_vectorizer.get_feature_names_out()
+        coef = current_model.coef_
+        if issparse(coef):
+            coef = coef.toarray()
+        coef = coef.ravel()
+        
+        top_positive_coefficients = np.argsort(coef)[-10:]
+        top_negative_coefficients = np.argsort(coef)[:10]
+        top_coefficients = np.hstack([top_negative_coefficients, top_positive_coefficients])
+        
+        word_importance = [(feature_names[i], coef[i]) for i in top_coefficients]
+    
+    return spam_probability, word_importance
 
 def send_message(message):
     data = {
@@ -164,16 +256,66 @@ def delete_message(group_id, message_id):
         print(f"Failed to delete message {message_id} from group {group_id}. Status code: {response.status_code}")
         return False
 
+def get_group_info(group_id):
+    url = f'{API_ROOT}groups/{group_id}'
+    params = {'token': access_token}
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()['response']
+    else:
+        print(f"Failed to retrieve group info for group {group_id}. Status code: {response.status_code}")
+        return None
+
+def is_admin_or_creator(group_id, user_id):
+    group_info = get_group_info(group_id)
+    if group_info:
+        # Check if the user is the group creator, safety feature
+        if group_info['creator_user_id'] == user_id:
+            return True
+        
+        # Check if the user is an admin, safety feature
+        for member in group_info['members']:
+            if member['user_id'] == user_id and member.get('roles', []) == ['admin']:
+                return True
+    
+    return False
+
 def kick_user(group_id, user_id):
+    if is_admin_or_creator(group_id, user_id):#Safety feature to not look retarded
+        print(f"Cannot kick user {user_id} as they are an admin or the group creator")
+        return False 
+    
     membership_id = get_membership_id(group_id, user_id)
     if membership_id:
         return remove_member(group_id, membership_id)
     else:
         print(f"User {user_id} not found in group {group_id}")
         return False
+    
+def update_spam_csv(message):
+    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spam.csv')
+    
+    file_exists = os.path.isfile(csv_path)
+    
+    with open(csv_path, 'a', newline='', encoding='utf-8') as csvfile:
+        spam_writer = csv.writer(csvfile)
+        if not file_exists:
+            spam_writer.writerow(['label', 'message'])
+        spam_writer.writerow(['spam', message])
+    
+    print(f"Updated spam.csv with new spam message: {message}")
+    
+    # Trigger model retraining in a separate thread
+    threading.Thread(target=train_model).start()
 
 def handle_message(message, user_id, group_id, message_id, sender_id):
-    print(f"Handling message: {message}")
+    print(f"Received message: {message}")
+    
+    if message.strip() == "A message was deleted.":
+        print("Ignoring deleted message notification")
+        return
+    
+    print(f"Processing message: {message}")
     
     if is_rate_limited(user_id):
         print("User exceeded rate limit")
@@ -185,30 +327,42 @@ def handle_message(message, user_id, group_id, message_id, sender_id):
         send_message("I'm a bot that leverages NLP techniques and machine learning to understand the content of messages and determine if they are related to specific topics (selling, tickets, concerts) or potentially spam/fraudulent. It helps in identifying and flagging messages that might require special attention or assistance.\n\nBy using NLTK, text preprocessing, and a Support Vector Machine (SVM) classifier with TF-IDF features, I can handle variations in word forms, filter out irrelevant words, and classify messages based on their content. The keyword matching and counting mechanism, along with the trained SVM classifier, allows me to determine the relevance and potential spam/fraudulent nature of a message.")
         return
     
-    spam_probability = classify_message(message)
-    
-    if is_spam(user_id, message) or spam_probability > 0.5:
-        print("Message flagged as spam")
-        if sender_id != BOT_ID:
-            send_message(f"[ALERT] This message has been flagged as spam or fraudulent with a probability of {spam_probability:.2%}. The user will be removed from the group, and the message will be deleted.")
-            kick_user(group_id, user_id)
-            delete_message(group_id, message_id)
-        else:
-            print("Skipping deletion of bot's own message")
-    
-    elif keyword_regex.search(message):
-        print("Message flagged based on keyword matches")
-        print("Sending response")
-        send_message(f"This message has been flagged as potentially related to selling, tickets, or concerts. It has a {spam_probability:.2%} probability of being spam or fraudulent. How can I assist you with that?")
-        add_to_cache(user_id, message)
-    else:
-        print("Message not flagged")
-        if not is_duplicate_message(user_id, message):
-            print("Sending generic response")
-            send_message(f"I received your message: '{message}'. It has a {spam_probability:.2%} probability of being spam or fraudulent. How can I assist you?")
+    try:
+        spam_probability, word_importance = classify_message(message)
+        
+        print(f"Spam probability: {spam_probability:.2%}")
+        print("Top words contributing to classification:")
+        for word, importance in word_importance:
+            print(f"  - {word}: {importance:.4f}")
+        
+        if is_spam(user_id, message) or spam_probability > 0.5:
+            print(f"Message flagged as spam")
+            if sender_id != BOT_ID:
+                #send_message(f"[ALERT] This message has been flagged as spam or fraudulent with a probability of {spam_probability:.2%}. The user will be removed from the group, and the message will be deleted.")
+                kick_user(group_id, user_id)
+                delete_message(group_id, message_id)
+                update_spam_csv(message)  # Update spam.csv and trigger retraining
+            else:
+                print("Skipping deletion of bot's own message")
+        
+        elif keyword_regex.search(message):
+            flagged_words = get_flagged_words(message)
+            print("Message flagged based on keyword matches:")
+            for category, word in flagged_words:
+                print(f"  - {category}: {word}")
             add_to_cache(user_id, message)
         else:
-            print("Duplicate message found in user's cache, ignoring generic response")
+            print("Message not flagged")
+            if not is_duplicate_message(user_id, message):
+                add_to_cache(user_id, message)
+            else:
+                print("Duplicate message found in user's cache, ignoring")
+    
+    except Exception as e:
+        print(f"An error occurred while processing the message: {str(e)}")
+        # Add fallback behavior here later on.... 
+        #makes debugging easier
+
 
 @app.route('/', methods=['POST', 'GET', 'HEAD'])
 def root():
@@ -243,5 +397,8 @@ def root():
 
 if __name__ == "__main__":
     print(f"Starting server with BOT_ID: {BOT_ID}")
-    send_message("Nike-Zues is starting up!")
-    app.run(debug=True, port=5000)
+    
+    #start initial trained model
+    train_model()
+    #send_message("Nike-Zues is starting up!\nThreat Detection System Online...\nThreat Aquisition System Online...\nThreat Response System Online...")
+    app.run(debug=True, port=5000)#Yes, ik this is an issue, ill switch to s3 tommorow - Kuria
