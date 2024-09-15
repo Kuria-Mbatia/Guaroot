@@ -30,7 +30,7 @@ Keyword-based Flagging: The bot checks messages against predefined sets of keywo
 >Nike-Zeus continuously updates its training dataset (spam.csv) with newly flagged spam messages and triggers a model retraining process in a separate thread. This ensures that the classifier stays up to date with the latest spam patterns and maintains its effectiveness over time.
 
 # How It Works
-##Nike-Zeus is a Flask web application that listens for incoming POST requests from the GroupMe webhook. It processes messages through a series of steps, including text preprocessing, spam classification, keyword matching, action taking, rate limiting, and response generation.
+## Nike-Zeus is a Flask web application that listens for incoming POST requests from the GroupMe webhook. It processes messages through a series of steps, including text preprocessing, spam classification, keyword matching, action taking, rate limiting, and response generation.
 
 
 # Code Structure
