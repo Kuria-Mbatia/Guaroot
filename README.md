@@ -19,19 +19,22 @@ In our case the Soviet ICBM's are spam bots infiltrating GroupMe servers posing 
 Keyword-based Flagging: The bot checks messages against predefined sets of keywords related to selling, tickets, concerts, and other flagged words. Messages containing these keywords are flagged and added to the user's message cache for further analysis.
 ### Rate Limiting:
 >To prevent users from sending messages too quickly, Nike-Zeus implements rate limiting. If a user exceeds the defined rate limit, the bot sends a warning message to maintain a controlled chat environment.
-
 ### User and Message Management:
 >When a message is flagged as spam or fraudulent, Nike-Zeus has the ability to remove the offending user from the group and delete the flagged message using the GroupMe API.
 ### Message Caching and Duplicate Detection:
 >The bot maintains a cache of recently sent messages for each user and checks for duplicates to avoid processing the same message multiple times, optimizing its efficiency.
-Self-introduction and Help: When the bot's name is mentioned along with the word "about," it responds with a helpful description of itself and its capabilities, assisting users in understanding its purpose and functionality.
+### Self-introduction and Help: 
+>When the bot's name is mentioned along with the word "about," it responds with a helpful description of itself and its capabilities, assisting users in understanding its purpose and functionality.
 
 ### Model Retraining:
 >Nike-Zeus continuously updates its training dataset (spam.csv) with newly flagged spam messages and triggers a model retraining process in a separate thread. This ensures that the classifier stays up to date with the latest spam patterns and maintains its effectiveness over time.
 
+# How It Works
+##Nike-Zeus is a Flask web application that listens for incoming POST requests from the GroupMe webhook. It processes messages through a series of steps, including text preprocessing, spam classification, keyword matching, action taking, rate limiting, and response generation.
 
 
-
+# Code Structure
+The Nike-Zeus codebase is organized into several key functions:
 >```
 >load_training_data(): Loads spam classification training data from a CSV file.
 >preprocess_text(): Preprocesses text by tokenizing, removing stopwords, and lemmatizing.
@@ -42,6 +45,14 @@ Self-introduction and Help: When the bot's name is mentioned along with the word
 >is_rate_limited(): Implements rate limiting for user messages.
 >handle_message(): Main function for processing incoming messages, detecting spam, and generating responses.
 >```
+
+# NLP Techniques and Machine Learning
+Nike-Zeus utilizes a combination of NLP techniques and machine learning algorithms:
+Text Preprocessing: Tokenization, stopword removal, and lemmatization using NLTK.
+Feature Extraction: TF-IDF (Term Frequency-Inverse Document Frequency) vectorization.
+Machine Learning: Support Vector Machine (SVM) classifier for spam detection.
+Keyword Matching: Regular expressions for detecting specific patterns in messages.
+
 
 ### Probability Scoring on messages 
 >The bot assigns spam probability scores using a Support Vector Machine (SVM) classifier. It uses the ```classify_message()``` function, which preprocesses the input text and uses the pre-trained SVM model to predict the probability of a message being spam. Current efficieny rates are between 97.648% - 98.8220% accurate on assigning a probability score on if a message is spam or not.
