@@ -27,17 +27,17 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
-BOT_ID = "Enter Bot ID Here"
+BOT_ID = ""
 BOT_NAME = "Nike-Zeus"
 API_ROOT = 'https://api.groupme.com/v3/'
 POST_URL = "https://api.groupme.com/v3/bots/post"
 REMOVE_MEMBER_URL = "https://api.groupme.com/v3/groups/{group_id}/members/{member_id}?token={access_token}"
 DELETE_MESSAGE_URL = "https://api.groupme.com/v3/groups/{group_id}/messages/{message_id}?token={access_token}"
-access_token = "Enter access token here"  
+access_token = ""  
 
 app = Flask(__name__)
 
-MESSAGE_CACHE_SIZE = 10
+MESSAGE_CACHE_SIZE = 50
 message_cache = defaultdict(lambda: deque(maxlen=MESSAGE_CACHE_SIZE))
 
 stemmer = PorterStemmer()
@@ -66,7 +66,7 @@ keyword_regex = re.compile(r'\b(' + '|'.join(selling_keywords + ticket_keywords 
 
 #Change rates later...
 RATE_LIMIT_WINDOW = 60  # Time window in seconds
-RATE_LIMIT_COUNT = 25  # Maximum number of messages allowed within the time window
+RATE_LIMIT_COUNT = 100  # Maximum number of messages allowed within the time window
 
 user_message_counts = defaultdict(list)
 
@@ -118,7 +118,7 @@ def preprocess_text(text):
 X = [preprocess_text(text) for text, _ in training_data]
 y = [label for _, label in training_data]
 
-# Split data into training and testing sets
+# Split data into training and testing sets, can make adjustments here
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Initialize and train the SVM classifier during startup, don't ask please - Km
@@ -136,14 +136,16 @@ def train_model():
     
     X = [preprocess_text(text) for text, _ in training_data]
     y = [label for _, label in training_data]
-
+#parameter adjustment area, will add a seperate function that globally addresses this later on... -KM
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     new_vectorizer = TfidfVectorizer()
     X_train_tfidf = new_vectorizer.fit_transform(X_train)
     X_test_tfidf = new_vectorizer.transform(X_test)
 
+#For tuning SVM parameters
     new_model = SVC(kernel='linear', probability=True)
+
     new_model.fit(X_train_tfidf, y_train)
 
     # Use a lock to safely update the global model and vectorizer
@@ -156,7 +158,7 @@ def train_model():
 
 svm_classifier = SVC(kernel='linear', probability=True)
 svm_classifier.fit(X_train_tfidf, y_train)
-
+#Model tuning on confidence threshold can also be done here, will impliment a conf__thresh to compare to spam_probability later on
 def classify_message(message):
     preprocessed_message = preprocess_text(message)
     
@@ -205,10 +207,15 @@ def add_to_cache(user_id, message):
     user_cache = message_cache[user_id]
     user_cache.append({'text': message, 'time': time()})
 
+#threshhold limit can be adjusted/tuned
 def is_spam(user_id, message):
     user_cache = message_cache[user_id]
     spam_count = sum(keyword_regex.search(cached_msg['text']) is not None for cached_msg in user_cache)
-    return spam_count > 3
+    return spam_count > 4 
+
+#changing to 5 for example allows for more leniancy on spam messages
+#changing to 2 or 1 makes the spam detection much more focused and stricter 
+# (3-4 is the sweet spot in my opinion)
 
 def is_rate_limited(user_id):
     current_time = time()
@@ -269,11 +276,11 @@ def get_group_info(group_id):
 def is_admin_or_creator(group_id, user_id):
     group_info = get_group_info(group_id)
     if group_info:
-        # Check if the user is the group creator, safety feature
+        # Check if the user is the group creator, safety feature #1 because the general members..
         if group_info['creator_user_id'] == user_id:
             return True
         
-        # Check if the user is an admin, safety feature
+        # Check if the user is an admin, safety feature #2 because the general members..
         for member in group_info['members']:
             if member['user_id'] == user_id and member.get('roles', []) == ['admin']:
                 return True
@@ -290,9 +297,10 @@ def kick_user(group_id, user_id):
         return remove_member(group_id, membership_id)
     else:
         print(f"User {user_id} not found in group {group_id}")
+        #User not in group
         return False
     
-def update_spam_csv(message):
+def update_csv(message, label):
     csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spam.csv')
     
     file_exists = os.path.isfile(csv_path)
@@ -301,17 +309,26 @@ def update_spam_csv(message):
         spam_writer = csv.writer(csvfile)
         if not file_exists:
             spam_writer.writerow(['label', 'message'])
-        spam_writer.writerow(['spam', message])
+        spam_writer.writerow([label, message, '', '', ''])
     
-    print(f"Updated spam.csv with new spam message: {message}")
+    print(f"Updated spam.csv with new {label} message: {message}")
     
-    # Trigger model retraining in a separate thread
-    threading.Thread(target=train_model).start()
+    if label == 'spam':
+        #model retraining in a separate thread, only if is spam message
+        threading.Thread(target=train_model).start()
+
+def add_ham_message(message):
+    update_csv(message, 'ham')
+    print("Ham message added to spam.csv without retraining the model")
+
+def add_spam_message(message):
+    update_csv(message, 'spam')
+    print("Spam message added to spam.csv and model retraining triggered")
 
 def handle_message(message, user_id, group_id, message_id, sender_id):
     print(f"Received message: {message}")
     
-    if message.strip() == "A message was deleted.":
+    if message.strip() == "A message was deleted":
         print("Ignoring deleted message notification")
         return
     
@@ -338,31 +355,30 @@ def handle_message(message, user_id, group_id, message_id, sender_id):
         if is_spam(user_id, message) or spam_probability > 0.5:
             print(f"Message flagged as spam")
             if sender_id != BOT_ID:
-                #send_message(f"[ALERT] This message has been flagged as spam or fraudulent with a probability of {spam_probability:.2%}. The user will be removed from the group, and the message will be deleted.")
+                send_message(f"[ALERT] This message has been flagged as spam or fraudulent with a probability of {spam_probability:.2%}. The user will be removed from the group, and the message will be deleted.")
                 kick_user(group_id, user_id)
                 delete_message(group_id, message_id)
-                update_spam_csv(message)  # Update spam.csv and trigger retraining
+                add_spam_message(message)  # Add spam message and trigger retraining
             else:
                 print("Skipping deletion of bot's own message")
+        else:
+            print("Message not flagged as spam")
+            if not is_duplicate_message(user_id, message):
+                add_to_cache(user_id, message)
+                add_ham_message(message)  # Add ham message without retraining
+            else:
+                print("Duplicate message found in user's cache, ignoring")
         
-        elif keyword_regex.search(message):
+        if keyword_regex.search(message):
             flagged_words = get_flagged_words(message)
             print("Message flagged based on keyword matches:")
             for category, word in flagged_words:
                 print(f"  - {category}: {word}")
-            add_to_cache(user_id, message)
-        else:
-            print("Message not flagged")
-            if not is_duplicate_message(user_id, message):
-                add_to_cache(user_id, message)
-            else:
-                print("Duplicate message found in user's cache, ignoring")
     
     except Exception as e:
         print(f"An error occurred while processing the message: {str(e)}")
         # Add fallback behavior here later on.... 
         #makes debugging easier
-
 
 @app.route('/', methods=['POST', 'GET', 'HEAD'])
 def root():
