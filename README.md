@@ -1,6 +1,9 @@
-# Nike-Zeus
-![A Nike Zeus A missile being test launched at White Sands illustrates the long wings and narrow fuselage that carried over from Hercules.](http://www.ninfinger.org/models/scaleroc/Nike-Zeus%20A%20antimissile/nza%2001.jpg)
 
+<H1 align="center">Guaroot</H1>
+<H3 align="center">"Root out the bad stuff🍂"</H3>
+<p align="center">
+  <img src="https://github.com/Kuria-Mbatia/Nike-Zeus/blob/main/Guaroot%20Images/file%20(1).jpg" />
+</p>
 [Wiki Link on Nike-Zeus Missile Defense Platform](https://en.wikipedia.org/wiki/Nike_Zeus])
 
 # Where does the name Nike-Zues come from?
