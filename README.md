@@ -4,6 +4,8 @@
 <p align="center">
   <img src="https://github.com/Kuria-Mbatia/Nike-Zeus/blob/main/Guaroot%20Images/file%20(1).jpg" />
 </p>
+
+<h2>Formerly known as Nike-Zeus</h2>
 [Wiki Link on Nike-Zeus Missile Defense Platform](https://en.wikipedia.org/wiki/Nike_Zeus])
 
 # Where does the name Nike-Zues come from?
