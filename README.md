@@ -5,13 +5,13 @@
   <img src="https://github.com/Kuria-Mbatia/Guaroot/blob/main/Guaroot%20Images/file%20(1).jpg" />
 </p>
 
-<h2>Formerly known as Guaroot</h2>
+<h2>Formerly known as Nike-Zeus</h2>
 
 ### This GroupMe bot utilizes Natural Language Processing (NLP) techniques and machine learning to analyze messages, detect spam, and provide intelligent responses in a GroupMe chat.
 
 ## What the Code Does
 ### Spam and Fraudulent Message Detection:
->Guatoor employs an SVM (Support Vector Machine) classifier trained on a dataset stored in a CSV file (spam.csv) to identify spam and potentially fraudulent messages. It utilizes TF-IDF (Term Frequency-Inverse Document Frequency) features to represent messages and assigns spam probability scores.
+>Guaroot employs an SVM (Support Vector Machine) classifier trained on a dataset stored in a CSV file (spam.csv) to identify spam and potentially fraudulent messages. It utilizes TF-IDF (Term Frequency-Inverse Document Frequency) features to represent messages and assigns spam probability scores.
 
 ### Keyword-based Flagging: 
 >The bot checks messages against predefined sets of keywords related to selling, tickets, concerts, and other flagged words. Messages containing these keywords are flagged and added to the user's message cache for further analysis.
